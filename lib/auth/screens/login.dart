@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -11,6 +12,7 @@ class _LoginState extends State<Login> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   bool _obscureText = true;
+  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -55,35 +57,72 @@ class _LoginState extends State<Login> {
                 obscureText: _obscureText,
               ),
               const SizedBox(
-                 height: 16,
+                height: 16,
               ),
               SizedBox(
-            
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    
                     backgroundColor: Colors.pinkAccent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                  ),  
-                  onPressed: () {
-                    print('Email: ${_email.text}');
-                    print('Password: ${_password.text}');
+                  ),
+                  onPressed: () async {
+                    try {
+                      setState(() {
+                        _loading = true;
+                      });
+                      final credential = await FirebaseAuth.instance
+                          .signInWithEmailAndPassword(
+                        email: _email.text,
+                        password: _password.text,
+                      );
+                      setState(() {
+                        _loading = false;
+                      });
+                      if (credential.user != null) {
+                        Navigator.pushNamed(context, '/home');
+                      }
+                    } on FirebaseAuthException catch (e) {
+                      setState(() {
+                        _loading = false;
+                      });
+                      String message;
+                      if (e.code == 'user-not-found') {
+                        message = 'No user found for that email.';
+                      } else if (e.code == 'wrong-password') {
+                        message = 'Wrong password provided for that user.';
+                      } else {
+                        message = 'An error occurred. Please try again.';
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(message)),
+                      );
+                    }
                   },
-                  child: const Text('Iniciar sesión'),
+                  child: _loading
+                      ? CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                      : const Text('Iniciar sesión'),
                 ),
               ),
-              // recupera la contraseña
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/recover');
                 },
                 child: const Text('Recuperar contraseña'),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/register');
+                },
+                child: const Text('Registrarse'),
               ),
             ],
           ),
